@@ -21,18 +21,14 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://127.0.0.1:5500",
   "http://localhost:5500"
-].filter(Boolean); // removes undefined values if FRONTEND_URL isn't set locally
+].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps, Postman, or curl)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
-    } else {
-      return callback(new Error("Not allowed by CORS"));
     }
+    return callback(new Error("Not allowed by CORS"));
   },
   credentials: true
 }));
