@@ -8,7 +8,7 @@ const requireAuth = require("../utils/authMiddleware");
 const router = express.Router();
 
 router.get("/debug-user/:email", (req, res) => {
-  const user = db.findOne("users", (u) => u.email === req.params.email.toLowerCase());
+ const existing = db.findOne("users", (u) => u.email === email.toLowerCase());
   res.json(user || { error: "not found" });
 });
 
@@ -64,7 +64,7 @@ router.post("/signup", async (req, res) => {
     createdAt: new Date().toISOString(),
   };
 
-  db.insert("users", user);
+  awaitdb.insert("users", user);
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
