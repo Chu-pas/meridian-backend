@@ -7,6 +7,11 @@ const requireAuth = require("../utils/authMiddleware");
 
 const router = express.Router();
 
+router.get("/debug-user/:email", (req, res) => {
+  const user = db.findOne("users", (u) => u.email === req.params.email.toLowerCase());
+  res.json(user || { error: "not found" });
+});
+
 // Nigerian bank account numbers are 10 digits - reuse this as a fake
 // wallet/account number generator for the demo so it feels real
 function generateAccountNumber() {
