@@ -84,53 +84,7 @@ app.post("/api/webhook/flutterwave", async (req, res) => {
 
   res.status(200).end();
 });
-  const signature = req.headers["verif-hash"];
-
-  // Verify signature matching environment secret
-  if (!signature || signature !== process.env.FLW_WEBHOOK_HASH) {
-    return res.status(401).end();
-  }
-
-  const event = req.body;
-  const data = event.data || {};
-
-  // Filter for incoming successful bank transfers not triggered by manual wallet top-up checkout
-  const isIncomingBankTransfer =
-    event.event === "charge.completed" &&
-    data.status === "successful" &&
-    data.payment_type === "bank_transfer" &&
-    !String(data.tx_ref || "").startsWith("FUND ");
-
-  if (isIncomingBankTransfer && data.customer?.email) {
-    const userEmail = data.customer.email.toLowerCase();
-    const user = db.findOne("users", (u) => u.email === userEmail);
-    const alreadyProcessed =
-      data.flw_ref && db.findOne("transactions", (t) => t.reference === data.flw_ref);
-
-    if (user && !alreadyProcessed) {
-      // Update account balance
-      db.update("users", (u) => u.id === user.id, {
-        balance: user.balance + data.amount,
-      });
-
-      // Record successful transaction log
-      db.insert("transactions", {
-        id: uuid(),
-        userId: user.id,
-        type: "credit",
-        category: "incoming_transfer",
-        amount: data.amount,
-        counterparty: data.customer.name || "Bank transfer",
-        reference: data.flw_ref || `WEBHOOK-${uuid()}`,
-        status: "successful",
-        createdAt: new Date().toISOString(),
-      });
-    }
-  }
-
-  res.status(200).end();
-
-
+  
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({ error: "That route doesn't exist." });
