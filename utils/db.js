@@ -1,57 +1,71 @@
-// Small file-based store so the app runs out of the box with zero setup.
-// IMPORTANT: swap this out for Postgres or MongoDB before you let real users
-// touch this thing - a JSON file will not survive concurrent writes or a
-// server restart at scale, and it has no transaction safety for money moves.
+// Now backed by MongoDB Atlas instead of local JSON files.
+// IMPORTANT: every function here is now ASYNC (returns a Promise).
+// Anywhere you call db.readAll(), db.insert(), db.findOne(), db.findMany(),
+// or db.update() in your route files, you now need to add "await" in front
+// of it, and the surrounding function needs to be "async".
 
-const fs = require("fs");
-const path = require("path");
+const { MongoClient } = require("mongodb");
 
-const DATA_DIR = path.join(__dirname, "..", "data");
-const FILES = {
-  users: path.join(DATA_DIR, "users.json"),
-  transactions: path.join(DATA_DIR, "transactions.json"),
-  savings: path.join(DATA_DIR, "savings.json"),
-  cards: path.join(DATA_DIR, "cards.json"),
-};
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+  throw new Error("MONGODB_URI is not set. Add it in your Render Environment settings.");
+}
 
-function ensureFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, "[]");
+let clientPromise = null;
+
+function getClient() {
+  if (!clientPromise) {
+    const client = new MongoClient(uri);
+    clientPromise = client.connect();
   }
+  return clientPromise;
 }
 
-Object.values(FILES).forEach(ensureFile);
-
-function readAll(table) {
-  return JSON.parse(fs.readFileSync(FILES[table], "utf-8"));
+async function getDb() {
+  const client = await getClient();
+  return client.db(); // uses the database name from the connection string
 }
 
-function writeAll(table, records) {
-  fs.writeFileSync(FILES[table], JSON.stringify(records, null, 2));
+async function readAll(table) {
+  const db = await getDb();
+  return db.collection(table).find({}).toArray();
 }
 
-function insert(table, record) {
-  const records = readAll(table);
-  records.push(record);
-  writeAll(table, records);
+async function writeAll(table, records) {
+  const db = await getDb();
+  const collection = db.collection(table);
+  await collection.deleteMany({});
+  if (records.length > 0) {
+    await collection.insertMany(records);
+  }
+  return records;
+}
+
+async function insert(table, record) {
+  const db = await getDb();
+  await db.collection(table).insertOne(record);
   return record;
 }
 
-function findOne(table, predicate) {
-  return readAll(table).find(predicate);
+async function findOne(table, predicate) {
+  const all = await readAll(table);
+  return all.find(predicate) || null;
 }
 
-function findMany(table, predicate) {
-  return readAll(table).filter(predicate);
+async function findMany(table, predicate) {
+  const all = await readAll(table);
+  return all.filter(predicate);
 }
 
-function update(table, predicate, changes) {
-  const records = readAll(table);
-  const idx = records.findIndex(predicate);
-  if (idx === -1) return null;
-  records[idx] = { ...records[idx], ...changes };
-  writeAll(table, records);
-  return records[idx];
+async function update(table, predicate, changes) {
+  const all = await readAll(table);
+  const found = all.find(predicate);
+  if (!found) return null;
+
+  const merged = { ...found, ...changes };
+  const db = await getDb();
+  await db.collection(table).updateOne({ id: found.id }, { $set: changes });
+  return merged;
 }
 
 module.exports = { readAll, writeAll, insert, findOne, findMany, update };
