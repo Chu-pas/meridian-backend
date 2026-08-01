@@ -14,8 +14,8 @@ function requireAdmin(req, res, next) {
 }
 
 // GET /api/admin/users?key=YOUR_ADMIN_PASSWORD
-router.get("/users", requireAdmin, (req, res) => {
-  const users = db.readAll("users");
+router.get("/users", requireAdmin, async (req, res) => {
+  const users = await db.readAll("users");
 
   const safeUsers = users.map((u) => ({
     id: u.id,
