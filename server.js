@@ -37,7 +37,53 @@ app.use("/api/admin", adminRoutes);
  * Flutterwave Webhook Handler
  * Credits a user's wallet when an incoming bank transfer is received.
  */
-app.post("/api/webhook/flutterwave", (req, res) => {
+app.post("/api/webhook/flutterwave", async (req, res) => {
+  const signature = req.headers["verif-hash"];
+
+  // Verify signature matching environment secret
+  if (!signature || signature !== process.env.FLW_WEBHOOK_HASH) {
+    return res.status(401).end();
+  }
+
+  const event = req.body;
+  const data = event.data || {};
+
+  // Filter for incoming successful bank transfers not triggered by manual wallet top-up checkout
+  const isIncomingBankTransfer =
+    event.event === "charge.completed" &&
+    data.status === "successful" &&
+    data.payment_type === "bank_transfer" &&
+    !String(data.tx_ref || "").startsWith("FUND_");
+
+  if (isIncomingBankTransfer && data.customer?.email) {
+    const userEmail = data.customer.email.toLowerCase();
+    const user = await db.findOne("users", (u) => u.email === userEmail);
+    const alreadyProcessed =
+      data.flw_ref && (await db.findOne("transactions", (t) => t.reference === data.flw_ref));
+
+    if (user && !alreadyProcessed) {
+      // Update account balance
+      await db.update("users", (u) => u.id === user.id, {
+        balance: user.balance + data.amount,
+      });
+
+      // Record successful transaction log
+      await db.insert("transactions", {
+        id: uuid(),
+        userId: user.id,
+        type: "credit",
+        category: "incoming_transfer",
+        amount: data.amount,
+        counterparty: data.customer.name || "Bank transfer",
+        reference: data.flw_ref || `WEBHOOK-${uuid()}`,
+        status: "successful",
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  res.status(200).end();
+});
   const signature = req.headers["verif-hash"];
 
   // Verify signature matching environment secret
@@ -83,7 +129,7 @@ app.post("/api/webhook/flutterwave", (req, res) => {
   }
 
   res.status(200).end();
-});
+
 
 // 404 Handler
 app.use((req, res) => {
