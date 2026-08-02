@@ -78,7 +78,7 @@ router.post("/signup", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  const user = db.findOne("users", (u) => u.email === (email || "").toLowerCase());
+  const user = await db.findOne("users", (u) => u.email === (email || "").toLowerCase());
   if (!user) {
     return res.status(401).json({ error: "Wrong email or password." });
   }
@@ -112,7 +112,7 @@ router.post("/set-pin", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "PIN needs to be exactly 4 digits." });
   }
   const pinHash = await bcrypt.hash(pin, 10);
-  db.update("users", (u) => u.id === req.userId, { pin: pinHash });
+  await db.update("users", (u) => u.id === req.userId, { pin: pinHash });
   res.json({ ok: true });
 });
 
