@@ -116,7 +116,7 @@ router.post("/set-pin", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-router.get("/me", requireAuth, (req, res) => {
+router.get("/me", requireAuth, async(req, res) => {
   const user = await db.findOne("users", (u) => u.id === req.userId);
   if (!user) return res.status(404).json({ error: "User not found." });
   res.json({
