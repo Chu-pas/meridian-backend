@@ -86,6 +86,8 @@ router.post("/login", async (req, res) => {
 if (!user.passwordHash) {
   return res.status(401).json({ error: "Wrong email or password." });
 }
+
+console.log("LOGIN DEBUG:", { emailReceived: email, passwordLength: password ? password.length : 0, hashExists: !!user.passwordHash });
   
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) {
