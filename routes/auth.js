@@ -83,6 +83,10 @@ router.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Wrong email or password." });
   }
 
+if (!user.passwordHash) {
+  return res.status(401).json({ error: "Wrong email or password." });
+}
+  
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) {
     return res.status(401).json({ error: "Wrong email or password." });
@@ -113,7 +117,7 @@ router.post("/set-pin", requireAuth, async (req, res) => {
 });
 
 router.get("/me", requireAuth, (req, res) => {
-  const user = db.findOne("users", (u) => u.id === req.userId);
+  const user = await db.findOne("users", (u) => u.id === req.userId);
   if (!user) return res.status(404).json({ error: "User not found." });
   res.json({
     id: user.id,
