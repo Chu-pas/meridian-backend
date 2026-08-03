@@ -84,7 +84,9 @@ const existing = await db.findOne("users", (u) => (u.email || "").toLowerCase() 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await db.findOne("users", (u) => u.email === (email || "").toLowerCase());
+ const cleanEmail = (email || "").trim().toLowerCase();
+const user = await db.findOne("users", (u) => (u.email || "").trim().toLowerCase() === cleanEmail);
+  
   if (!user) {
     return res.status(401).json({ error: "Wrong email or password." });
   }
