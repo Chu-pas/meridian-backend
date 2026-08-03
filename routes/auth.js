@@ -5,7 +5,9 @@ const { v4: uuid } = require("uuid");
 const db = require("../utils/db");
 const requireAuth = require("../utils/authMiddleware");
 
-const router = express.Router();router.get("/debug-db", async (req, res) => {
+const router = express.Router();
+
+router.get("/debug-db", async (req, res) => {
   const all = await db.readAll("users");
   res.json({ userCount: all.length, sampleEmails: all.slice(0, 5).map(u => u.email) });
 });
