@@ -65,7 +65,7 @@ const existing = await db.findOne("users", (u) => (u.email || "").toLowerCase() 
     createdAt: new Date().toISOString(),
   };
 
-  awaitdb.insert("users", user);
+  await db.insert("users", user);
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
