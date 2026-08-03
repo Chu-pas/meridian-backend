@@ -17,18 +17,7 @@ const adminRoutes = require("./routes/admin");
 const app = express();
 
 // Global Middleware
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || origin.includes("chu-pas.github.io") || origin.includes("localhost")) {
-      callback(null, true);
-    } else {
-      callback(null, true); // or pass error
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
 // Health Check
