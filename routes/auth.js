@@ -34,7 +34,8 @@ router.post("/signup", async (req, res) => {
     return res.status(400).json({ error: "Password needs to be at least 6 characters." });
   }
 
-  const existing = db.findOne("users", (u) => u.email === email.toLowerCase());
+  const cleanEmail = (email || "").trim().toLowerCase();
+const existing = await db.findOne("users", (u) => (u.email || "").toLowerCase() === cleanEmail);
   if (existing) {
     return res.status(409).json({ error: "An account with that email already exists." });
   }
@@ -42,10 +43,10 @@ router.post("/signup", async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 10);
 
   const user = {
-    id: uuid(),
-    fullName,
-    dob: dob || null,
-    email: email.toLowerCase(),
+  id: uuid(),
+  fullName,
+  dob: dob || null,
+  email: cleanEmail,
     phone,
     occupation: occupation || null,
     address: address || null,
